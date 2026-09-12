@@ -12,30 +12,30 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final ApiKeyAuthFilter apiKeyAuthFilter;
+    private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(ApiKeyAuthFilter apiKeyAuthFilter) {
-        this.apiKeyAuthFilter = apiKeyAuthFilter;
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-            // API sin sesiones ni formularios de login (es un API REST puro)
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .httpBasic(basic -> basic.disable())
             .formLogin(form -> form.disable())
 
-            // Todas las rutas /api/web/** requieren estar autenticado (API Key valida)
             .authorizeHttpRequests(auth -> auth
+                    // El endpoint para obtener el token queda abierto
+                    // (la API Key se valida dentro del propio AuthController)
+                    .requestMatchers("/auth/token").permitAll()
                     .requestMatchers("/api/web/**").hasRole("WEB")
                     .anyRequest().denyAll()
             )
 
-            // Nuestro filtro de API Key reemplaza el login usuario/contraseña
-            .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
